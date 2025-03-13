@@ -1,0 +1,782 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertisseur Playlists Spotify/YouTube Music</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+
+        h1,
+        h2 {
+            color: #1DB954;
+            /* Couleur Spotify */
+        }
+
+        h2 {
+            margin-top: 30px;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+        }
+
+        textarea,
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        textarea {
+            height: 200px;
+            resize: vertical;
+        }
+
+        button {
+            background-color: #1DB954;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #169c46;
+        }
+
+        .youtube-btn {
+            background-color: #FF0000;
+        }
+
+        .youtube-btn:hover {
+            background-color: #cc0000;
+        }
+
+        .result-area {
+            margin-top: 20px;
+            background-color: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .step {
+            background-color: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        .dropdown {
+            padding: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            margin-right: 10px;
+            width: 200px;
+        }
+
+        #csvOutput {
+            overflow-x: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th,
+        td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .direction-toggle {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .tab-selector {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            background-color: #e0e0e0;
+            border: 1px solid #ccc;
+            border-radius: 5px 5px 0 0;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            background-color: #1DB954;
+            color: white;
+            border-bottom: none;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #loadingSpinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
+            border-top-color: #1DB954;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .alert {
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+            border-left: 5px solid;
+        }
+
+        .alert-warning {
+            background-color: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .alert-info {
+            background-color: #d1ecf1;
+            border-left-color: #17a2b8;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Convertisseur de Playlists Spotify/YouTube Music</h1>
+
+    <div class="direction-toggle">
+        <select id="conversionDirection" class="dropdown">
+            <option value="spotify-to-youtube">Spotify vers YouTube Music</option>
+            <option value="youtube-to-spotify">YouTube Music vers Spotify</option>
+        </select>
+    </div>
+
+    <!-- Spotify vers YouTube -->
+    <div id="spotifyToYoutubeSection">
+        <h2>Spotify vers YouTube Music</h2>
+
+        <div class="tab-selector">
+            <div class="tab active" data-tab="url">Par URL</div>
+            <div class="tab" data-tab="text">Par Texte</div>
+        </div>
+
+        <div id="url-tab" class="tab-content active">
+            <div class="alert alert-info">
+                Entrez l'URL d'une playlist Spotify publique (par exemple :
+                https://open.spotify.com/playlist/37i9dQZEVXbNFJfN1Vw8d9)
+            </div>
+            <input type="text" id="spotifyUrl" placeholder="https://open.spotify.com/playlist/..." />
+            <div class="alert alert-warning">
+                Note : En raison des limitations des navigateurs, cette démonstration ne peut pas extraire réellement le
+                contenu de la playlist Spotify.
+                Dans une implémentation complète, cela nécessiterait l'API Spotify et un serveur backend.
+            </div>
+            <button id="fetchPlaylist">Simuler l'extraction de la playlist</button>
+            <span id="loadingSpinner" class="hidden"></span>
+        </div>
+
+        <div id="text-tab" class="tab-content">
+            <p>Copier et coller le contenu de votre playlist Spotify ci-dessous :</p>
+            <textarea id="spotifyInput" placeholder="Coller votre liste Spotify ici..."></textarea>
+            <button id="parseSpotify">Analyser la liste</button>
+            <button id="clearSpotify">Effacer</button>
+        </div>
+    </div>
+
+    <!-- YouTube vers Spotify -->
+    <div id="youtubeToSpotifySection" class="hidden">
+        <h2>YouTube Music vers Spotify</h2>
+        <div class="alert alert-info">
+            Pour une playlist YouTube Music, copiez et collez la liste des titres.
+        </div>
+        <textarea id="youtubeInput" placeholder="Coller votre liste YouTube Music ici..."></textarea>
+        <button id="parseYoutube">Analyser la liste</button>
+        <button id="clearYoutube">Effacer</button>
+    </div>
+
+    <!-- Résultat de l'analyse -->
+    <div class="result-area hidden" id="resultArea">
+        <h2>Résultat de l'analyse</h2>
+        <div id="csvOutput"></div>
+        <p>Total : <span id="songCount">0</span> chansons trouvées</p>
+        <button id="downloadCSV">Télécharger CSV</button>
+        <button id="copyToClipboard">Copier dans le presse-papier</button>
+        <div id="spotifyToYoutubeButtons">
+            <button id="createYoutubePlaylist" class="youtube-btn">Générer les liens YouTube Music</button>
+        </div>
+        <div id="youtubeToSpotifyButtons" class="hidden">
+            <button id="createSpotifyPlaylist">Générer les liens Spotify</button>
+        </div>
+    </div>
+
+    <div id="youtubeSearchResults" class="result-area hidden">
+        <h2>Rechercher sur YouTube Music</h2>
+        <p>Cliquez sur chaque lien pour ouvrir YouTube Music et créer votre playlist :</p>
+        <ol id="youtubeLinks"></ol>
+    </div>
+
+    <div id="spotifySearchResults" class="result-area hidden">
+        <h2>Rechercher sur Spotify</h2>
+        <p>Cliquez sur chaque lien pour ouvrir Spotify et créer votre playlist :</p>
+        <ol id="spotifyLinks"></ol>
+    </div>
+
+    <h2>Guide d'utilisation</h2>
+    <div class="step">
+        <h3>Pour Spotify vers YouTube Music :</h3>
+        <ol>
+            <li><strong>Méthode URL</strong> : Entrez simplement l'URL de la playlist Spotify et cliquez sur "Extraire
+                la playlist"</li>
+            <li><strong>Méthode manuelle</strong> :
+                <ul>
+                    <li>Ouvrez votre playlist Spotify</li>
+                    <li>Sélectionnez toutes les chansons (Ctrl+A)</li>
+                    <li>Copiez (Ctrl+C)</li>
+                    <li>Collez dans la zone de texte</li>
+                    <li>Cliquez sur "Analyser la liste"</li>
+                </ul>
+            </li>
+            <li>Téléchargez le CSV ou utilisez les liens YouTube Music générés</li>
+        </ol>
+    </div>
+    <div class="step">
+        <h3>Pour YouTube Music vers Spotify :</h3>
+        <ol>
+            <li>Ouvrez votre playlist YouTube Music</li>
+            <li>Sélectionnez toutes les chansons (Ctrl+A)</li>
+            <li>Copiez (Ctrl+C)</li>
+            <li>Collez dans la zone de texte dédiée</li>
+            <li>Cliquez sur "Analyser la liste"</li>
+            <li>Téléchargez le CSV ou utilisez les liens Spotify générés</li>
+        </ol>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Variables globales
+            let parsedSongs = [];
+
+            // Éléments du DOM
+            const conversionDirection = document.getElementById('conversionDirection');
+            const spotifyToYoutubeSection = document.getElementById('spotifyToYoutubeSection');
+            const youtubeToSpotifySection = document.getElementById('youtubeToSpotifySection');
+            const spotifyInput = document.getElementById('spotifyInput');
+            const youtubeInput = document.getElementById('youtubeInput');
+            const spotifyUrl = document.getElementById('spotifyUrl');
+            const fetchPlaylistBtn = document.getElementById('fetchPlaylist');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            const parseSpotifyBtn = document.getElementById('parseSpotify');
+            const parseYoutubeBtn = document.getElementById('parseYoutube');
+            const clearSpotifyBtn = document.getElementById('clearSpotify');
+            const clearYoutubeBtn = document.getElementById('clearYoutube');
+            const resultArea = document.getElementById('resultArea');
+            const csvOutput = document.getElementById('csvOutput');
+            const songCount = document.getElementById('songCount');
+            const downloadCSVBtn = document.getElementById('downloadCSV');
+            const copyToClipboardBtn = document.getElementById('copyToClipboard');
+            const createYoutubePlaylistBtn = document.getElementById('createYoutubePlaylist');
+            const createSpotifyPlaylistBtn = document.getElementById('createSpotifyPlaylist');
+            const youtubeSearchResults = document.getElementById('youtubeSearchResults');
+            const spotifySearchResults = document.getElementById('spotifySearchResults');
+            const youtubeLinks = document.getElementById('youtubeLinks');
+            const spotifyLinks = document.getElementById('spotifyLinks');
+            const spotifyToYoutubeButtons = document.getElementById('spotifyToYoutubeButtons');
+            const youtubeToSpotifyButtons = document.getElementById('youtubeToSpotifyButtons');
+            const tabs = document.querySelectorAll('.tab');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            // Gestion des onglets
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function () {
+                    // Désactiver tous les onglets
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+
+                    // Activer l'onglet cliqué
+                    this.classList.add('active');
+                    document.getElementById(this.dataset.tab + '-tab').classList.add('active');
+                });
+            });
+
+            // Changement de direction de conversion
+            conversionDirection.addEventListener('change', function () {
+                if (this.value === 'spotify-to-youtube') {
+                    spotifyToYoutubeSection.classList.remove('hidden');
+                    youtubeToSpotifySection.classList.add('hidden');
+                    spotifyToYoutubeButtons.classList.remove('hidden');
+                    youtubeToSpotifyButtons.classList.add('hidden');
+                } else {
+                    spotifyToYoutubeSection.classList.add('hidden');
+                    youtubeToSpotifySection.classList.remove('hidden');
+                    spotifyToYoutubeButtons.classList.add('hidden');
+                    youtubeToSpotifyButtons.classList.remove('hidden');
+                }
+                resultArea.classList.add('hidden');
+                youtubeSearchResults.classList.add('hidden');
+                spotifySearchResults.classList.add('hidden');
+            });
+
+            // Récupérer la playlist par URL (simulation)
+            // Remplacer la fonction fetchPlaylistBtn.addEventListener dans votre code actuel
+            fetchPlaylistBtn.addEventListener('click', function () {
+                const url = spotifyUrl.value.trim();
+                if (!url) {
+                    alert('Veuillez entrer une URL de playlist Spotify.');
+                    return;
+                }
+
+                if (!url.includes('spotify.com/playlist/')) {
+                    alert('URL de playlist Spotify invalide. Exemple: https://open.spotify.com/playlist/37i9dQZEVXbMDoHDwVN2tF');
+                    return;
+                }
+
+                // Extraire l'ID de la playlist
+                const playlistId = url.split('/playlist/')[1].split('?')[0];
+
+                // Afficher le chargement
+                loadingSpinner.classList.remove('hidden');
+                fetchPlaylistBtn.disabled = true;
+
+                // Appeler l'API backend
+                fetch(`http://localhost:3000/api/spotify/playlist/${playlistId}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Erreur lors de la récupération de la playlist');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        parsedSongs = data;
+                        displayResults(parsedSongs);
+                    })
+                    .catch(error => {
+                        console.error('Erreur:', error);
+                        alert('Erreur lors de la récupération de la playlist. Vérifiez la console pour plus de détails.');
+                    })
+                    .finally(() => {
+                        // Cacher le chargement
+                        loadingSpinner.classList.add('hidden');
+                        fetchPlaylistBtn.disabled = false;
+                    });
+            });
+            // Générer une playlist d'exemple basée sur l'ID
+            function generateSamplePlaylist(playlistId) {
+                // Pour la démonstration, on utilise l'ID pour générer une playlist cohérente
+                const playlistHash = hashCode(playlistId);
+                const songs = [];
+                const artists = [
+                    "The Weeknd", "Dua Lipa", "Taylor Swift", "Drake", "Billie Eilish",
+                    "Post Malone", "Ariana Grande", "Ed Sheeran", "Justin Bieber", "Doja Cat"
+                ];
+                const albums = [
+                    "After Hours", "Future Nostalgia", "folklore", "Certified Lover Boy", "Happier Than Ever",
+                    "Hollywood's Bleeding", "Positions", "=", "Justice", "Planet Her"
+                ];
+                const titles = [
+                    "Blinding Lights", "Don't Start Now", "cardigan", "Way 2 Sexy", "Happier Than Ever",
+                    "Circles", "positions", "Bad Habits", "Peaches", "Kiss Me More",
+                    "Save Your Tears", "Levitating", "willow", "Knife Talk", "Therefore I Am",
+                    "Sunflower", "34+35", "Shivers", "Stay", "Need To Know"
+                ];
+
+                // Générer entre 10 et 20 chansons
+                const count = (playlistHash % 10) + 10;
+
+                for (let i = 0; i < count; i++) {
+                    const artistIndex = (playlistHash + i) % artists.length;
+                    const albumIndex = (playlistHash + i) % albums.length;
+                    const titleIndex = (playlistHash + i) % titles.length;
+
+                    // Durée aléatoire entre 2:30 et 4:30
+                    const minutes = Math.floor(Math.random() * 2) + 2;
+                    const seconds = Math.floor(Math.random() * 60);
+                    const duration = `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+
+                    songs.push({
+                        title: titles[titleIndex],
+                        artists: artists[artistIndex],
+                        album: albums[albumIndex],
+                        duration: duration
+                    });
+                }
+
+                return songs;
+            }
+
+            // Simple fonction de hachage
+            function hashCode(str) {
+                let hash = 0;
+                for (let i = 0; i < str.length; i++) {
+                    const char = str.charCodeAt(i);
+                    hash = ((hash << 5) - hash) + char;
+                    hash = hash & hash; // Convertir en entier 32 bits
+                }
+                return Math.abs(hash);
+            }
+
+            // Analyser le contenu Spotify
+            parseSpotifyBtn.addEventListener('click', function () {
+                const spotifyText = spotifyInput.value.trim();
+                if (!spotifyText) {
+                    alert('Veuillez coller votre liste Spotify d\'abord.');
+                    return;
+                }
+                parsedSongs = parseSpotifyList(spotifyText);
+                displayResults(parsedSongs);
+            });
+
+            // Analyser le contenu YouTube
+            parseYoutubeBtn.addEventListener('click', function () {
+                const youtubeText = youtubeInput.value.trim();
+                if (!youtubeText) {
+                    alert('Veuillez coller votre liste YouTube Music d\'abord.');
+                    return;
+                }
+                parsedSongs = parseYoutubeList(youtubeText);
+                displayResults(parsedSongs);
+            });
+
+            // Effacer les entrées
+            clearSpotifyBtn.addEventListener('click', function () {
+                spotifyInput.value = '';
+            });
+
+            clearYoutubeBtn.addEventListener('click', function () {
+                youtubeInput.value = '';
+            });
+
+            // Télécharger CSV
+            downloadCSVBtn.addEventListener('click', function () {
+                if (parsedSongs.length === 0) {
+                    alert('Aucune chanson à télécharger.');
+                    return;
+                }
+                downloadCSV(parsedSongs);
+            });
+
+            // Copier dans le presse-papier
+            copyToClipboardBtn.addEventListener('click', function () {
+                if (parsedSongs.length === 0) {
+                    alert('Aucune chanson à copier.');
+                    return;
+                }
+
+                const csvContent = generateCSV(parsedSongs);
+                navigator.clipboard.writeText(csvContent).then(() => {
+                    alert('Contenu copié dans le presse-papier !');
+                }).catch(err => {
+                    console.error('Erreur lors de la copie: ', err);
+                    alert('Erreur lors de la copie. Veuillez réessayer.');
+                });
+            });
+
+            // Générer liens YouTube Music
+            createYoutubePlaylistBtn.addEventListener('click', function () {
+                if (parsedSongs.length === 0) {
+                    alert('Aucune chanson trouvée à rechercher.');
+                    return;
+                }
+                generateYoutubeLinks(parsedSongs);
+            });
+
+            // Générer liens Spotify
+            createSpotifyPlaylistBtn.addEventListener('click', function () {
+                if (parsedSongs.length === 0) {
+                    alert('Aucune chanson trouvée à rechercher.');
+                    return;
+                }
+                generateSpotifyLinks(parsedSongs);
+            });
+
+            // Fonctions d'analyse
+            function parseSpotifyList(text) {
+                const songs = [];
+                const lines = text.split('\n').filter(line => line.trim());
+
+                // Plusieurs patterns possibles pour les listes Spotify
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+
+                    // Pattern: Titre - Artiste(s)
+                    const titleArtistPattern = /^(.+) - (.+)$/;
+                    // Pattern: Artiste · Titre · Album
+                    const artistTitleAlbumPattern = /^(.+) · (.+) · (.+)$/;
+                    // Pattern: Titre Artiste Album Durée
+                    const spotifyTablePattern = /^([^\t]+)\t([^\t]+)\t([^\t]+)\t([0-9:]+)$/;
+
+                    let match;
+
+                    if (match = spotifyTablePattern.exec(line)) {
+                        // Format tableau
+                        songs.push({
+                            title: match[1].trim(),
+                            artists: match[2].trim(),
+                            album: match[3].trim(),
+                            duration: match[4].trim()
+                        });
+                    } else if (match = artistTitleAlbumPattern.exec(line)) {
+                        // Format artiste · titre · album
+                        songs.push({
+                            title: match[2].trim(),
+                            artists: match[1].trim(),
+                            album: match[3].trim(),
+                            duration: 'N/A'
+                        });
+                    } else if (match = titleArtistPattern.exec(line)) {
+                        // Format titre - artiste
+                        songs.push({
+                            title: match[1].trim(),
+                            artists: match[2].trim(),
+                            album: 'N/A',
+                            duration: 'N/A'
+                        });
+                    } else {
+                        // Si la ligne contient au moins un mot, on considère que c'est un titre
+                        if (/\w+/.test(line)) {
+                            songs.push({
+                                title: line,
+                                artists: lines[i + 1]?.trim() || 'Inconnu',
+                                album: 'N/A',
+                                duration: 'N/A'
+                            });
+                        }
+                    }
+                }
+
+                return songs;
+            }
+
+            function parseYoutubeList(text) {
+                const songs = [];
+                const lines = text.split('\n').filter(line => line.trim());
+
+                // Plusieurs patterns possibles pour YouTube Music
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+
+                    // Pattern: "Titre" de Artiste(s) • Album
+                    const ytMusicPattern = /^"(.+)" de (.+) • (.+)$/;
+                    // Pattern: Titre • Artiste(s) • Album
+                    const ytMusicAlternatePattern = /^(.+) • (.+) • (.+)$/;
+                    // Pattern: Titre • Artiste(s)
+                    const ytMusicSimplePattern = /^(.+) • (.+)$/;
+
+                    let match;
+
+                    if (match = ytMusicPattern.exec(line)) {
+                        songs.push({
+                            title: match[1].trim(),
+                            artists: match[2].trim(),
+                            album: match[3].trim(),
+                            duration: 'N/A'
+                        });
+                    } else if (match = ytMusicAlternatePattern.exec(line)) {
+                        songs.push({
+                            title: match[1].trim(),
+                            artists: match[2].trim(),
+                            album: match[3].trim(),
+                            duration: 'N/A'
+                        });
+                    } else if (match = ytMusicSimplePattern.exec(line)) {
+                        songs.push({
+                            title: match[1].trim(),
+                            artists: match[2].trim(),
+                            album: 'N/A',
+                            duration: 'N/A'
+                        });
+                    } else {
+                        // Si une ligne ressemble à un titre
+                        if (/\w+/.test(line) && !line.match(/^[0-9:.]+$/)) {
+                            // Si la ligne suivante est une durée, on ajoute sans la durée
+                            if (lines[i + 1] && lines[i + 1].match(/^[0-9:.]+$/)) {
+                                songs.push({
+                                    title: line,
+                                    artists: 'Inconnu',
+                                    album: 'N/A',
+                                    duration: lines[i + 1].trim()
+                                });
+                                i++; // Sauter la ligne suivante
+                            } else {
+                                songs.push({
+                                    title: line,
+                                    artists: 'Inconnu',
+                                    album: 'N/A',
+                                    duration: 'N/A'
+                                });
+                            }
+                        }
+                    }
+                }
+
+                return songs;
+            }
+
+            // Affichage des résultats
+            function displayResults(songs) {
+                if (songs.length === 0) {
+                    csvOutput.innerHTML = '<p>Aucune chanson trouvée. Vérifiez le format de votre liste.</p>';
+                    songCount.textContent = '0';
+                    resultArea.classList.remove('hidden');
+                    return;
+                }
+
+                // Créer un tableau HTML
+                let tableHTML = '<table><tr><th>Titre</th><th>Artiste(s)</th><th>Album</th><th>Durée</th></tr>';
+
+                songs.forEach(song => {
+                    tableHTML += `<tr>
+                        <td>${escapeHTML(song.title)}</td>
+                        <td>${escapeHTML(song.artists)}</td>
+                        <td>${escapeHTML(song.album)}</td>
+                        <td>${escapeHTML(song.duration)}</td>
+                    </tr>`;
+                });
+
+                tableHTML += '</table>';
+
+                csvOutput.innerHTML = tableHTML;
+                songCount.textContent = songs.length;
+                resultArea.classList.remove('hidden');
+
+                // Réinitialiser les résultats de recherche
+                youtubeSearchResults.classList.add('hidden');
+                spotifySearchResults.classList.add('hidden');
+            }
+
+            // Génération du CSV
+            function generateCSV(songs) {
+                // En-tête CSV
+                let csv = 'Title,Artists,Album,Duration\n';
+
+                // Ajouter chaque chanson
+                songs.forEach(song => {
+                    // Échapper les virgules dans les champs
+                    const title = `"${song.title.replace(/"/g, '""')}"`;
+                    const artists = `"${song.artists.replace(/"/g, '""')}"`;
+                    const album = `"${song.album.replace(/"/g, '""')}"`;
+                    const duration = `"${song.duration.replace(/"/g, '""')}"`;
+
+                    csv += `${title},${artists},${album},${duration}\n`;
+                });
+
+                return csv;
+            }
+
+            // Téléchargement du CSV
+            function downloadCSV(songs) {
+                const csvContent = generateCSV(songs);
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+
+                const link = document.createElement('a');
+                link.setAttribute('href', url);
+                link.setAttribute('download', 'playlist.csv');
+                link.style.visibility = 'hidden';
+
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+
+            // Génération des liens YouTube Music
+            function generateYoutubeLinks(songs) {
+                youtubeLinks.innerHTML = '';
+
+                songs.forEach(song => {
+                    const searchTerm = `${song.title} ${song.artists}`;
+                    const searchUrl = `https://music.youtube.com/search?q=${encodeURIComponent(searchTerm)}`;
+
+                    const li = document.createElement('li');
+                    const link = document.createElement('a');
+
+                    link.href = searchUrl;
+                    link.target = '_blank';
+                    link.textContent = `${song.title} - ${song.artists}`;
+
+                    li.appendChild(link);
+                    youtubeLinks.appendChild(li);
+                });
+
+                youtubeSearchResults.classList.remove('hidden');
+                spotifySearchResults.classList.add('hidden');
+            }
+
+            // Génération des liens Spotify
+            function generateSpotifyLinks(songs) {
+                spotifyLinks.innerHTML = '';
+
+                songs.forEach(song => {
+                    const searchTerm = `${song.title} ${song.artists}`;
+                    const searchUrl = `https://open.spotify.com/search/${encodeURIComponent(searchTerm)}`;
+
+                    const li = document.createElement('li');
+                    const link = document.createElement('a');
+
+                    link.href = searchUrl;
+                    link.target = '_blank';
+                    link.textContent = `${song.title} - ${song.artists}`;
+
+                    li.appendChild(link);
+                    spotifyLinks.appendChild(li);
+                });
+
+                spotifySearchResults.classList.remove('hidden');
+                youtubeSearchResults.classList.add('hidden');
+            }
+
+            // Fonction d'échappement HTML
+            function escapeHTML(str) {
+                return str
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+        });
+    </script>
+</body>
+
+</html>
