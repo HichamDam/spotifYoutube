@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-S
+
 // Variables pour stocker le token
 let spotifyToken = null;
 let tokenExpiration = 0;
