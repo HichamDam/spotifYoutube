@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convertisseur de Playlist Musicale</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --text-color: #333333;
+            --primary-color: #1DB954;
+            --secondary-color: #FF0000;
+            --border-color: #dddddd;
+        }
+
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --text-color: #ffffff;
+            --border-color: #444444;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: all 0.3s;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        input, textarea, button, select {
+            margin: 10px 0;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+        }
+
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden { display: none; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Convertisseur Spotify → YouTube Music</h1>
+        
+        <div id="authSection" class="hidden">
+            <button id="loginButton">Se connecter avec Spotify</button>
+        </div>
+
+        <div id="mainSection" class="hidden">
+            <input type="text" id="playlistUrl" placeholder="URL de la playlist Spotify">
+            <button id="convertButton">Convertir</button>
+            <div id="loader" class="loader hidden"></div>
+            <div id="error" class="error"></div>
+            
+            <div id="results" class="hidden">
+                <h3>Résultats :</h3>
+                <ul id="trackList"></ul>
+                <button id="exportButton">Exporter en CSV</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration Spotify (À MODIFIER)
+        const SPOTIFY_CONFIG = {
+            clientId: 'df9927123783400382c9547d2a90771f',
+            redirectUri: 'http://localhost:3000/index2.html',
+            scope: 'playlist-read-private'
+        };
+
+        let accessToken = null;
+
+        // Éléments DOM
+        const elements = {
+            auth: document.getElementById('authSection'),
+            main: document.getElementById('mainSection'),
+            loginBtn: document.getElementById('loginButton'),
+            convertBtn: document.getElementById('convertButton'),
+            loader: document.getElementById('loader'),
+            error: document.getElementById('error'),
+            results: document.getElementById('results'),
+            trackList: document.getElementById('trackList'),
+            exportBtn: document.getElementById('exportButton')
+        };
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            setupEventListeners();
+        });
+
+        function checkAuth() {
+            // Vérifier le token dans l'URL
+            const hashParams = new URLSearchParams(window.location.hash.substring(1));
+            accessToken = hashParams.get('access_token');
+
+            if (accessToken) {
+                // Nettoyer l'URL
+                window.history.replaceState({}, document.title, window.location.pathname);
+                localStorage.setItem('spotify_token', accessToken);
+                showMainInterface();
+            } else {
+                accessToken = localStorage.getItem('spotify_token');
+                accessToken ? showMainInterface() : showLoginButton();
+            }
+        }
+
+        function showLoginButton() {
+            elements.auth.classList.remove('hidden');
+            elements.main.classList.add('hidden');
+        }
+
+        function showMainInterface() {
+            elements.auth.classList.add('hidden');
+            elements.main.classList.remove('hidden');
+        }
+
+        function setupEventListeners() {
+            elements.loginBtn.addEventListener('click', () => {
+                window.location.href = generateAuthUrl();
+            });
+
+            elements.convertBtn.addEventListener('click', async () => {
+                const playlistUrl = document.getElementById('playlistUrl').value;
+                await processPlaylist(playlistUrl);
+            });
+
+            elements.exportBtn.addEventListener('click', exportToCSV);
+        }
+
+        function generateAuthUrl() {
+            return `https://accounts.spotify.com/authorize?` +
+                `client_id=${SPOTIFY_CONFIG.clientId}` +
+                `&redirect_uri=${encodeURIComponent(SPOTIFY_CONFIG.redirectUri)}` +
+                `&scope=${encodeURIComponent(SPOTIFY_CONFIG.scope)}` +
+                `&response_type=token` +
+                `&show_dialog=true`;
+        }
+
+        async function processPlaylist(url) {
+            try {
+                elements.loader.classList.remove('hidden');
+                elements.error.textContent = '';
+
+                const playlistId = extractPlaylistId(url);
+                const tracks = await fetchPlaylistTracks(playlistId);
+                displayTracks(tracks);
+                
+            } catch (error) {
+                elements.error.textContent = `Erreur : ${error.message}`;
+            } finally {
+                elements.loader.classList.add('hidden');
+            }
+        }
+
+        function extractPlaylistId(url) {
+            const regex = /playlist\/([a-zA-Z0-9]+)/;
+            const match = url.match(regex);
+            if (!match) throw new Error('URL Spotify invalide');
+            return match[1];
+        }
+
+        async function fetchPlaylistTracks(playlistId) {
+            const response = await fetch(`https://api.spotify.com/v1/playlists/${playlistId}/tracks`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` }
+            });
+
+            if (!response.ok) throw new Error('Erreur de récupération des données');
+
+            const data = await response.json();
+            return data.items.map(item => ({
+                title: item.track.name,
+                artist: item.track.artists.map(a => a.name).join(', '),
+                album: item.track.album.name,
+                duration: msToTime(item.track.duration_ms)
+            }));
+        }
+
+        function msToTime(ms) {
+            const minutes = Math.floor(ms / 60000);
+            const seconds = ((ms % 60000) / 1000).toFixed(0);
+            return `${minutes}:${seconds.padStart(2, '0')}`;
+        }
+
+        function displayTracks(tracks) {
+            elements.trackList.innerHTML = tracks
+                .map(track => `<li>${track.title} - ${track.artist}</li>`)
+                .join('');
+            elements.results.classList.remove('hidden');
+        }
+
+        function exportToCSV() {
+            const tracks = Array.from(elements.trackList.children).map(li => {
+                const [title, artist] = li.textContent.split(' - ');
+                return { title, artist };
+            });
+
+            const csvContent = [
+                ['Titre', 'Artiste'].join(','),
+                ...tracks.map(track => 
+                    `"${track.title.replace(/"/g, '""')}","${track.artist.replace(/"/g, '""')}"`
+                )
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'playlist_export.csv';
+            link.click();
+        }
+    </script>
+</body>
+</html>
